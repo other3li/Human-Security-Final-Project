@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Secure Library</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      height: 100vh;
+      background: linear-gradient(135deg, #0a1a2f, #102c4c);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: #fff;
+    }
+
+    .card {
+      background: #ffffff;
+      color: #333;
+      width: 450px;
+      padding: 30px;
+      border-radius: 14px;
+      text-align: center;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    }
+
+    .logo {
+      width: 110px;
+      margin-bottom: 10px;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+      color: #102c4c;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 8px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .btn-primary { background: #102c4c; color: white; }
+    .btn-secondary { background: #3a5a80; color: white; }
+    .btn-danger { background: #b93a3a; color: white; }
+    .btn-outline { background: transparent; border: 1px solid #102c4c; color: #102c4c; }
+
+    .hidden { display: none; }
+
+    .user-box {
+      background: #f4f6f8;
+      margin-top: 15px;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+
+    pre {
+      text-align: left;
+      background: #f0f0f0;
+      padding: 10px;
+      border-radius: 8px;
+      max-height: 220px;
+      overflow: auto;
+      margin-top: 15px;
+      font-size: 12px;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="card">
+
+  <img src="logo.png" class="logo" alt="Logo" />
+  <h1>Secure Library</h1>
+
+  <!-- AUTH -->
+  <button class="btn-primary" onclick="login()">Login</button>
+  <button class="btn-outline" onclick="logout()">Logout</button>
+  <button class="btn-outline" onclick="showToken()">Show Token</button>
+  <button class="btn-outline" onclick="callMe()">Call Backend /me</button>
+
+  <!-- USER INFO -->
+  <div id="user-info" class="user-box hidden"></div>
+
+  <!-- BOOKS -->
+  <button id="btn-view" class="btn-secondary hidden">📚 View Books</button>
+  <button id="btn-add" class="btn-primary hidden">➕ Add Book</button>
+  <button id="btn-delete" class="btn-danger hidden">🗑️ Delete Book</button>
+
+  <!-- NOTES -->
+  <button id="btn-notes-view" class="btn-secondary hidden">📝 View My Notes</button>
+  <button id="btn-notes-add" class="btn-primary hidden">➕ Add Note</button>
+  <button id="btn-notes-del" class="btn-danger hidden">🗑️ Delete Note (id=1)</button>
+
+  <pre id="output"></pre>
+
+</div>
+
+<script>
+  const KEYCLOAK_URL = "http://localhost:8081";
+  const REALM = "secured-library";
+  const CLIENT_ID = "frontend-client";
+  const REDIRECT_URI = "http://localhost:5500";
+
+  function login() {
+    const url =
+      `${KEYCLOAK_URL}/realms/${REALM}/protocol/openid-connect/auth` +
+      `?client_id=${CLIENT_ID}` +
+      `&response_type=token` +
+      `&scope=openid` +
+      `&redirect_uri=${REDIRECT_URI}`;
+    window.location.href = url;
+  }
+
+  function logout() {
+    localStorage.clear();
+    location.reload();
+  }
+
+  function showToken() {
+    document.getElementById("output").innerText =
+      localStorage.getItem("access_token") || "No token";
+  }
+
+  function parseToken() {
+    const hash = window.location.hash;
+    if (!hash) return;
+
+    const params = new URLSearchParams(hash.substring(1));
+    const token = params.get("access_token");
+
+    if (token) {
+      localStorage.setItem("access_token", token);
+      history.replaceState({}, document.title, "/");
+    }
+  }
+
+  function callMe() {
+    const token = localStorage.getItem("access_token");
+    fetch("http://127.0.0.1:5000/me", {
+      headers: { Authorization: "Bearer " + token }
+    })
+    .then(r => r.json())
+    .then(data => {
+      document.getElementById("output").innerText =
+        JSON.stringify(data, null, 2);
+
+      if (data.user) {
+        document.getElementById("user-info").classList.remove("hidden");
+        document.getElementById("user-info").innerHTML =
+          `<b>User:</b> ${data.user.username}<br>` +
+          `<b>Roles:</b> ${data.user.roles.join(", ")}`;
+
+        renderButtons(data.user.roles);
+      }
+    });
+  }
+
+  function renderButtons(roles) {
+    const allBtns = [
+      "btn-view","btn-add","btn-delete",
+      "btn-notes-view","btn-notes-add","btn-notes-del"
+    ];
+    allBtns.forEach(id => document.getElementById(id).classList.add("hidden"));
+
+    // Books
+    if (roles.includes("read_only")) {
+      document.getElementById("btn-view").classList.remove("hidden");
+    }
+    if (roles.includes("crud_no_delete") || roles.includes("full_crud")) {
+      document.getElementById("btn-view").classList.remove("hidden");
+      document.getElementById("btn-add").classList.remove("hidden");
+    }
+    if (roles.includes("full_crud")) {
+      document.getElementById("btn-delete").classList.remove("hidden");
+    }
+
+    // Notes
+    if (roles.includes("read_only")) {
+      document.getElementById("btn-notes-view").classList.remove("hidden");
+    }
+    if (roles.includes("crud_no_delete") || roles.includes("full_crud")) {
+      document.getElementById("btn-notes-view").classList.remove("hidden");
+      document.getElementById("btn-notes-add").classList.remove("hidden");
+    }
+    if (roles.includes("full_crud")) {
+      document.getElementById("btn-notes-del").classList.remove("hidden");
+    }
+  }
+
+  // ===== API CALLS =====
+  function callApi(method, endpoint) {
+    const token = localStorage.getItem("access_token");
+    fetch(`http://127.0.0.1:5000${endpoint}`, {
+      method,
+      headers: { Authorization: "Bearer " + token }
+    })
+    .then(async r => {
+      document.getElementById("output").innerText =
+        `Status: ${r.status}\n\n${await r.text()}`;
+    });
+  }
+
+  function callApiJson(method, endpoint, body) {
+    const token = localStorage.getItem("access_token");
+    fetch(`http://127.0.0.1:5000${endpoint}`, {
+      method,
+      headers: {
+        Authorization: "Bearer " + token,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body)
+    })
+    .then(async r => {
+      document.getElementById("output").innerText =
+        `Status: ${r.status}\n\n${await r.text()}`;
+    });
+  }
+
+  // Books
+  document.getElementById("btn-view").onclick = () => callApi("GET", "/books");
+  document.getElementById("btn-add").onclick = () => callApi("POST", "/books");
+  document.getElementById("btn-delete").onclick = () => callApi("DELETE", "/books/1");
+
+  // Notes
+  document.getElementById("btn-notes-view").onclick = () => callApi("GET", "/notes");
+  document.getElementById("btn-notes-add").onclick = () =>
+    callApiJson("POST", "/notes", { title: "Frontend Note", content: "Hello from UI" });
+  document.getElementById("btn-notes-del").onclick = () => callApi("DELETE", "/notes/1");
+
+  parseToken();
+</script>
+
+</body>
+</html>
