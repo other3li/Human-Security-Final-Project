@@ -1,0 +1,244 @@
+:root{
+  --primary: #6366f1;
+  --primary-dark: #4f46e5;
+  --secondary: #10b981;
+  --accent: #f59e0b;
+  --danger: #ef4444;
+
+  --dark: #0f172a;
+  --light: #f8fafc;
+
+  --glass: rgba(255, 255, 255, 0.08);
+  --glass-border: rgba(255, 255, 255, 0.15);
+  --shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+
+  --transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+*{ box-sizing:border-box; margin:0; padding:0; }
+html, body{ height:100%; }
+
+body{
+  font-family: "Poppins", "Segoe UI", Tahoma, sans-serif;
+  color: var(--light);
+  overflow-x: hidden;
+
+  /* نفس روح الخلفية بتاعة الفرونت */
+  background: linear-gradient(135deg,
+    #0f172a 0%,
+    #1e293b 25%,
+    #334155 50%,
+    #1e293b 75%,
+    #0f172a 100%);
+  background-size: 400% 400%;
+  animation: gradientBG 15s ease infinite;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding: 28px 16px;
+}
+
+@keyframes gradientBG {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* شوية Glow Orbs بدل particles (CSS فقط) */
+.bg-orbs{
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(600px 600px at 20% 20%, rgba(99,102,241,.25), transparent 60%),
+    radial-gradient(700px 700px at 80% 30%, rgba(16,185,129,.20), transparent 60%),
+    radial-gradient(600px 600px at 40% 80%, rgba(245,158,11,.14), transparent 60%);
+  filter: blur(0px);
+}
+
+.login-container{
+  width:100%;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  position: relative;
+  z-index: 1;
+}
+
+.login-card{
+  width: min(420px, 100%);
+  padding: 30px 28px;
+
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 26px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(18px);
+
+  position: relative;
+  overflow: hidden;
+  animation: slideUp 0.9s ease;
+}
+
+@keyframes slideUp{
+  from{ opacity:0; transform: translateY(18px); }
+  to{ opacity:1; transform: translateY(0); }
+}
+
+/* شريط Gradient فوق الكارت زي glass-card */
+.login-card::before{
+  content:"";
+  position:absolute;
+  top:0; left:0; right:0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+}
+
+.brand{
+  display:flex;
+  align-items:center;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.logo{
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  padding: 10px;
+  object-fit: contain;
+  box-shadow: 0 16px 30px rgba(99,102,241,.35);
+}
+
+.brand-text{ line-height: 1.1; }
+.brand-title{
+  font-size: 1.35rem;
+  font-weight: 800;
+  background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 55%, var(--accent) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.brand-subtitle{
+  margin-top: 6px;
+  font-size: 0.78rem;
+  color: #94a3b8;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+}
+
+.login-title{
+  margin: 10px 0 16px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+/* Alerts */
+.alert{
+  margin: 10px 0 16px;
+  padding: 12px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.06);
+  color: #e2e8f0;
+  font-size: 0.9rem;
+}
+.alert.error{
+  border-color: rgba(239,68,68,.35);
+  background: rgba(239,68,68,.10);
+  color: #fecaca;
+}
+.alert.success{
+  border-color: rgba(16,185,129,.35);
+  background: rgba(16,185,129,.10);
+  color: #bbf7d0;
+}
+.alert.warning{
+  border-color: rgba(245,158,11,.35);
+  background: rgba(245,158,11,.10);
+  color: #fde68a;
+}
+
+.login-form{ display:grid; gap: 12px; }
+
+.field{ display:grid; gap: 8px; }
+.field-label{
+  font-size: 0.82rem;
+  color: #cbd5e1;
+  letter-spacing: .3px;
+}
+
+.login-card input{
+  width: 100%;
+  padding: 14px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(15,23,42,.30);
+  color: #e2e8f0;
+  font-size: 0.95rem;
+  transition: var(--transition);
+  outline: none;
+}
+
+.login-card input::placeholder{ color: rgba(148,163,184,.85); }
+
+.login-card input:focus{
+  border-color: rgba(99,102,241,.7);
+  box-shadow: 0 0 0 4px rgba(99,102,241,.18);
+  background: rgba(15,23,42,.38);
+}
+
+/* Button زي .btn .btn-primary */
+.btn{
+  padding: 14px 16px;
+  border: none;
+  border-radius: 16px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition);
+  position: relative;
+  overflow: hidden;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.btn-primary{
+  width: 100%;
+  color: white;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  box-shadow: 0 10px 30px rgba(99, 102, 241, 0.35);
+}
+
+.btn::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  transform: translateX(-120%);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.18), transparent);
+  transition: transform .7s;
+}
+
+.btn:hover::before{ transform: translateX(120%); }
+.btn:hover{
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 18px 40px rgba(0,0,0,.35);
+}
+.btn:active{ transform: translateY(-1px) scale(1.01); }
+
+.footer-text{
+  margin-top: 16px;
+  font-size: 0.78rem;
+  color: #94a3b8;
+  text-align: center;
+}
+
+/* Mobile */
+@media (max-width: 480px){
+  .login-card{ padding: 26px 18px; border-radius: 22px; }
+  .brand-title{ font-size: 1.2rem; }
+  .logo{ width: 52px; height: 52px; border-radius: 15px; }
+}
