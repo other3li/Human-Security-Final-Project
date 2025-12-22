@@ -2,246 +2,1057 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Secure Library</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Secure Library | Human Security Management System</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
   <style>
-    * {
-      box-sizing: border-box;
-      font-family: 'Segoe UI', Tahoma, sans-serif;
+    :root {
+      --primary: #6366f1;
+      --primary-dark: #4f46e5;
+      --secondary: #10b981;
+      --accent: #f59e0b;
+      --danger: #ef4444;
+      --dark: #0f172a;
+      --light: #f8fafc;
+      --glass: rgba(255, 255, 255, 0.08);
+      --glass-border: rgba(255, 255, 255, 0.15);
+      --shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      --transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
 
     body {
-      margin: 0;
-      height: 100vh;
-      background: linear-gradient(135deg, #0a1a2f, #102c4c);
+      min-height: 100vh;
+      background: linear-gradient(135deg,
+        #0f172a 0%,
+        #1e293b 25%,
+        #334155 50%,
+        #1e293b 75%,
+        #0f172a 100%);
+      background-size: 400% 400%;
+      animation: gradientBG 15s ease infinite;
+      color: var(--light);
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    @keyframes gradientBG {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+
+    /* Floating Particles */
+    .particles { position: fixed; width: 100%; height: 100%; z-index: -1; }
+    .particle {
+      position: absolute;
+      background: linear-gradient(45deg, var(--primary), var(--secondary));
+      border-radius: 50%;
+      animation: particleFloat 20s infinite linear;
+    }
+    @keyframes particleFloat {
+      0% { transform: translateY(0) rotate(0deg); }
+      100% { transform: translateY(-1000px) rotate(720deg); }
+    }
+
+    /* Main Container */
+    .container {
+      min-height: 100vh;
       display: flex;
-      justify-content: center;
+      flex-direction: column;
       align-items: center;
-      color: #fff;
+      padding: 40px 20px;
+      position: relative;
+      z-index: 1;
     }
 
-    .card {
-      background: #ffffff;
-      color: #333;
-      width: 450px;
-      padding: 30px;
-      border-radius: 14px;
-      text-align: center;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
-    }
-
+    /* Header */
+    .header { text-align: center; margin-bottom: 40px; animation: fadeInDown 1s ease; }
+    .logo-container { display: flex; align-items: center; justify-content: center; gap: 20px; margin-bottom: 20px; }
     .logo {
-      width: 110px;
+      width: 100px; height: 100px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      border-radius: 25px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 48px; color: white;
+      box-shadow: 0 20px 40px rgba(99, 102, 241, 0.4);
+      animation: floatLogo 6s ease-in-out infinite;
+      position: relative; overflow: hidden;
+    }
+    .logo::before {
+      content: '';
+      position: absolute;
+      width: 50%; height: 200%;
+      background: rgba(255, 255, 255, 0.1);
+      transform: rotate(45deg);
+      animation: shine 3s infinite;
+    }
+    @keyframes shine { 0% { left: -100%; } 100% { left: 200%; } }
+    @keyframes floatLogo { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-20px) rotate(5deg); } }
+
+    .title {
+      font-size: 3.5rem; font-weight: 800;
+      background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 50%, var(--accent) 100%);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
       margin-bottom: 10px;
+      text-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+    }
+    .subtitle {
+      font-size: 1.2rem;
+      color: #94a3b8;
+      font-weight: 300;
+      letter-spacing: 2px;
+      text-transform: uppercase;
     }
 
-    h1 {
-      margin-bottom: 20px;
-      color: #102c4c;
-    }
-
-    button {
+    /* Glass Card */
+    .glass-card {
+      background: var(--glass);
+      backdrop-filter: blur(20px);
+      border-radius: 30px;
+      border: 1px solid var(--glass-border);
+      box-shadow: var(--shadow);
+      padding: 40px;
       width: 100%;
-      padding: 12px;
-      margin-top: 8px;
+      max-width: 1400px;
+      margin-bottom: 40px;
+      position: relative;
+      overflow: hidden;
+      animation: slideUp 1s ease;
+    }
+    .glass-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+    }
+    .section-title i {
+      font-size: 28px;
+      color: var(--primary);
+      background: rgba(99, 102, 241, 0.2);
+      width: 60px; height: 60px;
+      border-radius: 15px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .section-title h2 { font-size: 1.8rem; font-weight: 600; color: white; }
+
+    /* Button Grid */
+    .button-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+    .btn {
+      padding: 22px 30px;
       border: none;
-      border-radius: 8px;
-      font-size: 14px;
+      border-radius: 18px;
+      font-size: 16px;
+      font-weight: 600;
       cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 15px;
+      transition: var(--transition);
+      position: relative;
+      overflow: hidden;
+      z-index: 1;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .btn[disabled] { cursor: not-allowed; filter: grayscale(20%); }
+    .btn::before {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%;
+      width: 100%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      transition: left 0.7s;
+      z-index: -1;
+    }
+    .btn:hover::before { left: 100%; }
+    .btn:hover { transform: translateY(-8px) scale(1.05); box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4); }
+    .btn:active { transform: translateY(-2px) scale(1.02); }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white;
+      box-shadow: 0 10px 30px rgba(99, 102, 241, 0.4);
+    }
+    .btn-secondary {
+      background: linear-gradient(135deg, var(--secondary), #0ea271);
+      color: white;
+      box-shadow: 0 10px 30px rgba(16, 185, 129, 0.4);
+    }
+    .btn-danger {
+      background: linear-gradient(135deg, var(--danger), #dc2626);
+      color: white;
+      box-shadow: 0 10px 30px rgba(239, 68, 68, 0.4);
+    }
+    .btn-outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); }
+
+    /* User Info Panel */
+    .user-panel {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 30px;
+      margin-bottom: 40px;
+    }
+    .user-card {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 20px;
+      padding: 30px;
+      border-left: 5px solid var(--secondary);
+      animation: fadeIn 1s ease;
+    }
+    .user-card.hidden { display: none; }
+    .user-card h3 {
+      font-size: 1.4rem;
+      color: var(--primary);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .info-grid { display: grid; gap: 15px; }
+    .info-item {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .info-item i {
+      color: var(--secondary);
+      font-size: 20px;
+      width: 40px; height: 40px;
+      background: rgba(16, 185, 129, 0.1);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
     }
 
-    .btn-primary { background: #102c4c; color: white; }
-    .btn-secondary { background: #3a5a80; color: white; }
-    .btn-danger { background: #b93a3a; color: white; }
-    .btn-outline { background: transparent; border: 1px solid #102c4c; color: #102c4c; }
-
-    .hidden { display: none; }
-
-    .user-box {
-      background: #f4f6f8;
-      margin-top: 15px;
-      padding: 12px;
-      border-radius: 8px;
-      font-size: 14px;
+    /* Console */
+    .terminal {
+      background: rgba(0, 0, 0, 0.4);
+      border-radius: 20px;
+      padding: 30px;
+      margin-top: 40px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      position: relative;
+      overflow: hidden;
+    }
+    .terminal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+    }
+    .terminal-header h3 {
+      font-size: 1.4rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--secondary);
+    }
+    .terminal-controls { display: flex; gap: 10px; }
+    .terminal-btn {
+      width: 40px; height: 40px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition);
+    }
+    .terminal-btn:hover { background: var(--primary); transform: translateY(-3px); }
+    #output {
+      background: rgba(0, 0, 0, 0.3);
+      color: #86efac;
+      font-family: 'Courier New', monospace;
+      font-size: 15px;
+      padding: 25px;
+      border-radius: 15px;
+      min-height: 250px;
+      max-height: 400px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      line-height: 1.6;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      text-shadow: 0 0 10px rgba(134, 239, 172, 0.3);
     }
 
-    pre {
-      text-align: left;
-      background: #f0f0f0;
-      padding: 10px;
-      border-radius: 8px;
-      max-height: 220px;
-      overflow: auto;
-      margin-top: 15px;
-      font-size: 12px;
+    /* Security Badge */
+    .security-badge {
+      position: fixed;
+      top: 30px;
+      right: 30px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: white;
+      padding: 15px 25px;
+      border-radius: 50px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 600;
+      box-shadow: 0 10px 30px rgba(99, 102, 241, 0.4);
+      z-index: 1000;
+      animation: badgePulse 3s infinite;
+    }
+    @keyframes badgePulse {
+      0%, 100% { box-shadow: 0 10px 30px rgba(99, 102, 241, 0.4); transform: scale(1); }
+      50% { box-shadow: 0 10px 40px rgba(99, 102, 241, 0.6); transform: scale(1.05); }
+    }
+
+    /* Loading */
+    .loading {
+      display: inline-block;
+      width: 24px; height: 24px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: var(--primary);
+      animation: spin 1s ease-in-out infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* FAB */
+    .fab {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      width: 60px; height: 60px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      z-index: 1000;
+      transition: var(--transition);
+      animation: floatFab 3s ease-in-out infinite;
+    }
+    @keyframes floatFab {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    .fab:hover { transform: scale(1.1) rotate(90deg); box-shadow: 0 15px 40px rgba(99, 102, 241, 0.6); }
+
+    /* Animations */
+    @keyframes fadeInDown { from { opacity: 0; transform: translateY(-30px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(50px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    @media (max-width: 1024px) {
+      .title { font-size: 2.8rem; }
+      .glass-card { padding: 30px 20px; }
+      .button-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 768px) {
+      .title { font-size: 2.2rem; }
+      .logo { width: 80px; height: 80px; font-size: 36px; }
+      .button-grid { grid-template-columns: 1fr; }
+      .user-panel { grid-template-columns: 1fr; }
+      .security-badge { top: 20px; right: 20px; padding: 12px 20px; font-size: 14px; }
     }
   </style>
 </head>
 
 <body>
+  <div class="particles" id="particles"></div>
 
-<div class="card">
+  <div class="security-badge" id="badge">
+    <i class="fas fa-shield-alt"></i>
+    <span id="badgeText">NOT AUTHENTICATED</span>
+  </div>
 
-  <img src="logo.png" class="logo" alt="Logo" />
-  <h1>Secure Library</h1>
+  <div class="fab" onclick="scrollToTop()">
+    <i class="fas fa-arrow-up"></i>
+  </div>
 
-  <!-- AUTH -->
-  <button class="btn-primary" onclick="login()">Login</button>
-  <button class="btn-outline" onclick="logout()">Logout</button>
-  <button class="btn-outline" onclick="showToken()">Show Token</button>
-  <button class="btn-outline" onclick="callMe()">Call Backend /me</button>
+  <div class="container">
+    <header class="header">
+      <div class="logo-container">
+        <div class="logo"><i class="fas fa-shield-alt"></i></div>
+        <div>
+          <h1 class="title">Secure Library</h1>
+          <p class="subtitle">Human Security Management System</p>
+        </div>
+      </div>
+    </header>
 
-  <!-- USER INFO -->
-  <div id="user-info" class="user-box hidden"></div>
+    <main class="glass-card">
+      <div class="section-title">
+        <i class="fas fa-fingerprint"></i>
+        <h2>Authentication & Security</h2>
+      </div>
 
-  <!-- BOOKS -->
-  <button id="btn-view" class="btn-secondary hidden">📚 View Books</button>
-  <button id="btn-add" class="btn-primary hidden">➕ Add Book</button>
-  <button id="btn-delete" class="btn-danger hidden">🗑️ Delete Book</button>
+      <div class="button-grid">
+        <button class="btn btn-primary" onclick="login()">
+          <i class="fas fa-sign-in-alt"></i>
+          <span>Login with Keycloak</span>
+        </button>
+        <button class="btn btn-outline" onclick="logout()">
+          <i class="fas fa-sign-out-alt"></i>
+          <span>Logout</span>
+        </button>
+        <button class="btn btn-outline" onclick="showToken()">
+          <i class="fas fa-key"></i>
+          <span>Show Access Token</span>
+        </button>
+        <button class="btn btn-outline" onclick="callMe()">
+          <i class="fas fa-user-check"></i>
+          <span>Verify Session</span>
+        </button>
+      </div>
 
-  <!-- NOTES -->
-  <button id="btn-notes-view" class="btn-secondary hidden">📝 View My Notes</button>
-  <button id="btn-notes-add" class="btn-primary hidden">➕ Add Note</button>
-  <button id="btn-notes-del" class="btn-danger hidden">🗑️ Delete Note (id=1)</button>
+      <div class="user-panel">
+        <div id="user-info" class="user-card hidden">
+          <h3><i class="fas fa-user-circle"></i> User Information</h3>
+          <div class="info-grid">
+            <div class="info-item">
+              <i class="fas fa-user"></i>
+              <div>
+                <div class="info-label">Username</div>
+                <div class="info-value" id="username">Not logged in</div>
+              </div>
+            </div>
+            <div class="info-item">
+              <i class="fas fa-user-tag"></i>
+              <div>
+                <div class="info-label">Roles</div>
+                <div class="info-value" id="user-roles">No permissions</div>
+              </div>
+            </div>
+            <div class="info-item">
+              <i class="fas fa-clock"></i>
+              <div>
+                <div class="info-label">Session Duration</div>
+                <div class="info-value" id="session-time">00:00:00</div>
+              </div>
+            </div>
+            <div class="info-item">
+              <i class="fas fa-shield-alt"></i>
+              <div>
+                <div class="info-label">Security Level</div>
+                <div class="info-value" id="security-level">BASIC</div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-  <pre id="output"></pre>
+        <div class="user-card">
+          <h3><i class="fas fa-bolt"></i> Quick Actions</h3>
+          <div class="button-grid" style="grid-template-columns: repeat(2, 1fr); margin-bottom: 0;">
+            <button id="qa-view-books" class="btn btn-secondary" onclick="callApi('GET', '/books')">
+              <i class="fas fa-eye"></i> View Books
+            </button>
+            <button id="qa-view-notes" class="btn btn-secondary" onclick="callApi('GET', '/notes')">
+              <i class="fas fa-sticky-note"></i> View Notes
+            </button>
+            <button id="qa-add-book" class="btn btn-primary"
+              onclick="callApiJson('POST', '/books', {title: 'New Book', author: 'System'})">
+              <i class="fas fa-plus"></i> Add Book
+            </button>
+            <button id="qa-add-note" class="btn btn-primary"
+              onclick="callApiJson('POST', '/notes', {title: 'New Note', content: 'Created via Quick Action'})">
+              <i class="fas fa-plus"></i> Add Note
+            </button>
+          </div>
+        </div>
+      </div>
 
-</div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 40px; margin-top: 40px;">
+        <div>
+          <div class="section-title">
+            <i class="fas fa-book"></i>
+            <h2>Book Management</h2>
+          </div>
+          <div class="button-grid">
+            <button id="btn-view" class="btn btn-secondary hidden">
+              <i class="fas fa-eye"></i>
+              <span>View All Books</span>
+            </button>
+            <button id="btn-add" class="btn btn-primary hidden">
+              <i class="fas fa-plus-circle"></i>
+              <span>Add New Book</span>
+            </button>
+            <button id="btn-delete" class="btn btn-danger hidden">
+              <i class="fas fa-trash-alt"></i>
+              <span>Delete Book</span>
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <div class="section-title">
+            <i class="fas fa-sticky-note"></i>
+            <h2>Notes Management</h2>
+          </div>
+          <div class="button-grid">
+            <button id="btn-notes-view" class="btn btn-secondary hidden">
+              <i class="fas fa-list"></i>
+              <span>View My Notes</span>
+            </button>
+            <button id="btn-notes-add" class="btn btn-primary hidden">
+              <i class="fas fa-plus"></i>
+              <span>Add New Note</span>
+            </button>
+            <button id="btn-notes-del" class="btn btn-danger hidden">
+              <i class="fas fa-trash"></i>
+              <span>Delete Note</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="terminal">
+        <div class="terminal-header">
+          <h3><i class="fas fa-terminal"></i> System Console</h3>
+          <div class="terminal-controls">
+            <button class="terminal-btn" onclick="clearConsole()" title="Clear Console"><i class="fas fa-broom"></i></button>
+            <button class="terminal-btn" onclick="copyConsole()" title="Copy Output"><i class="fas fa-copy"></i></button>
+            <button class="terminal-btn" onclick="exportLogs()" title="Export Logs"><i class="fas fa-download"></i></button>
+          </div>
+        </div>
+        <pre id="output"> Secure Library System Initialized
+ Ready for authentication...
+ Backend: http://127.0.0.1:5000
+ Frontend: http://localhost:5500</pre>
+      </div>
+    </main>
+  </div>
 
 <script>
+  // ======================
+  // CONFIG
+  // ======================
+  // لو Keycloak قديم (فيه /auth) خليهم: http://localhost:8081/auth
   const KEYCLOAK_URL = "http://localhost:8081";
   const REALM = "secured-library";
   const CLIENT_ID = "frontend-client";
-  const REDIRECT_URI = "http://localhost:5500";
 
-  function login() {
-    const url =
+  const API_BASE = "http://127.0.0.1:5000";
+  const REDIRECT_URI = window.location.origin + window.location.pathname;
+
+  let sessionStartTime = null;
+  let updateInterval = null;
+
+  // ======================
+  // PARTICLES
+  // ======================
+  function createParticles() {
+    const particlesContainer = document.getElementById('particles');
+    for (let i = 0; i < 100; i++) {
+      const particle = document.createElement('div');
+      particle.className = 'particle';
+
+      const size = Math.random() * 6 + 2;
+      const duration = Math.random() * 20 + 10;
+      const delay = Math.random() * 10;
+
+      particle.style.cssText = `
+        width: ${size}px;
+        height: ${size}px;
+        left: ${Math.random() * 100}vw;
+        top: ${100 + Math.random() * 20}vh;
+        opacity: ${Math.random() * 0.4 + 0.1};
+        animation-duration: ${duration}s;
+        animation-delay: ${delay}s;
+        background: linear-gradient(45deg,
+          hsl(${Math.random() * 60 + 200}, 100%, 70%),
+          hsl(${Math.random() * 60 + 200}, 100%, 50%));
+      `;
+      particlesContainer.appendChild(particle);
+    }
+  }
+
+  // ======================
+  // PKCE HELPERS
+  // ======================
+  function randomString(length = 64) {
+    const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
+    const bytes = new Uint8Array(length);
+    crypto.getRandomValues(bytes);
+    let str = "";
+    for (const b of bytes) str += charset[b % charset.length];
+    return str;
+  }
+
+  async function sha256(plain) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(plain);
+    return await crypto.subtle.digest("SHA-256", data);
+  }
+
+  function base64urlEncode(buffer) {
+    const bytes = new Uint8Array(buffer);
+    let binary = "";
+    for (const b of bytes) binary += String.fromCharCode(b);
+    return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+
+  function tokenPayload(token) {
+    try { return JSON.parse(atob(token.split(".")[1])); } catch { return null; }
+  }
+
+  function setBadge(active) {
+    const badgeText = document.getElementById("badgeText");
+    badgeText.textContent = active ? "SECURE SESSION ACTIVE" : "NOT AUTHENTICATED";
+  }
+
+  // ======================
+  // AUTH FLOW (Code + PKCE)
+  // ======================
+  async function login() {
+    showLoading(" Redirecting to Keycloak (PKCE)...");
+    const verifier = randomString(64);
+    const challenge = base64urlEncode(await sha256(verifier));
+    const state = randomString(16);
+    const nonce = randomString(16);
+
+    sessionStorage.setItem("pkce_verifier", verifier);
+    sessionStorage.setItem("pkce_state", state);
+    sessionStorage.setItem("pkce_nonce", nonce);
+
+    const authUrl =
       `${KEYCLOAK_URL}/realms/${REALM}/protocol/openid-connect/auth` +
-      `?client_id=${CLIENT_ID}` +
-      `&response_type=token` +
-      `&scope=openid` +
-      `&redirect_uri=${REDIRECT_URI}`;
-    window.location.href = url;
+      `?client_id=${encodeURIComponent(CLIENT_ID)}` +
+      `&response_type=code` +
+      `&scope=${encodeURIComponent("openid profile email")}` +
+      `&redirect_uri=${encodeURIComponent(REDIRECT_URI)}` +
+      `&code_challenge=${encodeURIComponent(challenge)}` +
+      `&code_challenge_method=S256` +
+      `&state=${encodeURIComponent(state)}` +
+      `&nonce=${encodeURIComponent(nonce)}`;
+
+    window.location.href = authUrl;
+  }
+
+  async function handleAuthRedirect() {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+    const state = params.get("state");
+    const error = params.get("error");
+
+    if (error) {
+      showError(` Authentication error: ${error}\n${params.get("error_description") || ""}`);
+      history.replaceState({}, document.title, window.location.pathname);
+      return;
+    }
+
+    if (!code) return;
+
+    const expectedState = sessionStorage.getItem("pkce_state");
+    if (!expectedState || state !== expectedState) {
+      showError(" Invalid state. Please try login again.");
+      return;
+    }
+
+    const verifier = sessionStorage.getItem("pkce_verifier");
+    if (!verifier) {
+      showError(" Missing PKCE verifier. Please try login again.");
+      return;
+    }
+
+    showLoading(" Exchanging authorization code for tokens...");
+
+    const tokenUrl = `${KEYCLOAK_URL}/realms/${REALM}/protocol/openid-connect/token`;
+    const body = new URLSearchParams({
+      grant_type: "authorization_code",
+      client_id: CLIENT_ID,
+      code,
+      redirect_uri: REDIRECT_URI,
+      code_verifier: verifier
+    });
+
+    try {
+      const res = await fetch(tokenUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error_description || JSON.stringify(data) || `HTTP ${res.status}`);
+      }
+
+      localStorage.setItem("access_token", data.access_token || "");
+      localStorage.setItem("refresh_token", data.refresh_token || "");
+      localStorage.setItem("id_token", data.id_token || "");
+      localStorage.setItem("token_expires_at", String(Date.now() + (data.expires_in || 300) * 1000));
+
+      sessionStorage.removeItem("pkce_verifier");
+      sessionStorage.removeItem("pkce_state");
+      sessionStorage.removeItem("pkce_nonce");
+
+      history.replaceState({}, document.title, window.location.pathname);
+      setBadge(true);
+      showSuccess(" Authentication successful! Verifying session with backend...");
+      setTimeout(callMe, 700);
+
+    } catch (e) {
+      showError(` Token exchange failed:\n${e.message}`);
+    }
   }
 
   function logout() {
+    showLoading(" Ending secure session...");
+
+    const idToken = localStorage.getItem("id_token");
     localStorage.clear();
+    sessionStartTime = null;
+    if (updateInterval) clearInterval(updateInterval);
+
+    setBadge(false);
+
+    // Logout from Keycloak (if id_token exists)
+    if (idToken) {
+      const logoutUrl =
+        `${KEYCLOAK_URL}/realms/${REALM}/protocol/openid-connect/logout` +
+        `?id_token_hint=${encodeURIComponent(idToken)}` +
+        `&post_logout_redirect_uri=${encodeURIComponent(REDIRECT_URI)}`;
+      window.location.href = logoutUrl;
+      return;
+    }
+
     location.reload();
   }
 
   function showToken() {
-    document.getElementById("output").innerText =
-      localStorage.getItem("access_token") || "No token";
+    const token = localStorage.getItem("access_token");
+    if (!token) return showError(" No access token found. Please login first.");
+
+    const preview = token.substring(0, 60) + "...";
+    const payload = tokenPayload(token);
+    const exp = payload?.exp ? new Date(payload.exp * 1000).toISOString() : "unknown";
+
+    const lines = [
+      " ACCESS TOKEN (Truncated):",
+      "═".repeat(50),
+      preview,
+      "",
+      " TOKEN INFORMATION:",
+      `• Length: ${token.length} characters`,
+      `• Exp: ${exp}`,
+      `• Storage: LocalStorage`,
+      "",
+      " SECURITY NOTE:",
+      "Never share this token."
+    ];
+    document.getElementById("output").innerText = lines.join("\n");
   }
 
-  function parseToken() {
-    const hash = window.location.hash;
-    if (!hash) return;
+  // ======================
+  // SESSION + UI
+  // ======================
+  async function callMe() {
+    const token = localStorage.getItem("access_token");
+    if (!token) return showError(" Please login first (no token).");
 
-    const params = new URLSearchParams(hash.substring(1));
-    const token = params.get("access_token");
+    showLoading(" Verifying session with backend server...");
 
-    if (token) {
-      localStorage.setItem("access_token", token);
-      history.replaceState({}, document.title, "/");
+    try {
+      const response = await fetch(`${API_BASE}/me`, {
+        headers: { Authorization: "Bearer " + token }
+      });
+
+      const text = await response.text();
+      let data = null;
+      try { data = JSON.parse(text); } catch { data = { raw: text }; }
+
+      if (!response.ok) {
+        setBadge(false);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}\n${text}`);
+      }
+
+      document.getElementById("output").innerText = JSON.stringify(data, null, 2);
+
+      if (data.user) {
+        setBadge(true);
+        updateUserInfo(data.user);
+        renderButtons(data.user.roles || []);
+        renderQuickActions(data.user.roles || []);
+        startSessionTimer();
+        updateSecurityLevel(data.user.roles || []);
+        showSuccess(` Session verified! Welcome ${data.user.username}`);
+        updateQuickStats();
+      }
+    } catch (error) {
+      showError(` Failed to verify session:\n${error.message}`);
     }
   }
 
-  function callMe() {
-    const token = localStorage.getItem("access_token");
-    fetch("http://127.0.0.1:5000/me", {
-      headers: { Authorization: "Bearer " + token }
-    })
-    .then(r => r.json())
-    .then(data => {
-      document.getElementById("output").innerText =
-        JSON.stringify(data, null, 2);
+  function updateUserInfo(user) {
+    const userCard = document.getElementById("user-info");
+    userCard.classList.remove("hidden");
 
-      if (data.user) {
-        document.getElementById("user-info").classList.remove("hidden");
-        document.getElementById("user-info").innerHTML =
-          `<b>User:</b> ${data.user.username}<br>` +
-          `<b>Roles:</b> ${data.user.roles.join(", ")}`;
+    document.getElementById("username").textContent = user.username || "unknown";
+    document.getElementById("user-roles").textContent = (user.roles || []).join(", ") || "none";
 
-        renderButtons(data.user.roles);
-      }
-    });
+    sessionStartTime = new Date();
+    updateSessionTime();
+  }
+
+  function updateSessionTime() {
+    if (!sessionStartTime) return;
+    const now = new Date();
+    const diff = Math.floor((now - sessionStartTime) / 1000);
+    const h = Math.floor(diff / 3600);
+    const m = Math.floor((diff % 3600) / 60);
+    const s = diff % 60;
+    document.getElementById("session-time").textContent =
+      `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  }
+
+  function updateSecurityLevel(roles) {
+    let level = "BASIC";
+    if (roles.includes("full_crud")) level = "ADMIN";
+    else if (roles.includes("crud_no_delete")) level = "EDITOR";
+    else if (roles.includes("read_only")) level = "VIEWER";
+    document.getElementById("security-level").textContent = level;
+  }
+
+  function startSessionTimer() {
+    if (updateInterval) clearInterval(updateInterval);
+    updateInterval = setInterval(updateSessionTime, 1000);
   }
 
   function renderButtons(roles) {
-    const allBtns = [
-      "btn-view","btn-add","btn-delete",
-      "btn-notes-view","btn-notes-add","btn-notes-del"
-    ];
-    allBtns.forEach(id => document.getElementById(id).classList.add("hidden"));
+    const ids = ["btn-view","btn-add","btn-delete","btn-notes-view","btn-notes-add","btn-notes-del"];
 
-    // Books
-    if (roles.includes("read_only")) {
-      document.getElementById("btn-view").classList.remove("hidden");
-    }
-    if (roles.includes("crud_no_delete") || roles.includes("full_crud")) {
-      document.getElementById("btn-view").classList.remove("hidden");
-      document.getElementById("btn-add").classList.remove("hidden");
-    }
-    if (roles.includes("full_crud")) {
-      document.getElementById("btn-delete").classList.remove("hidden");
-    }
-
-    // Notes
-    if (roles.includes("read_only")) {
-      document.getElementById("btn-notes-view").classList.remove("hidden");
-    }
-    if (roles.includes("crud_no_delete") || roles.includes("full_crud")) {
-      document.getElementById("btn-notes-view").classList.remove("hidden");
-      document.getElementById("btn-notes-add").classList.remove("hidden");
-    }
-    if (roles.includes("full_crud")) {
-      document.getElementById("btn-notes-del").classList.remove("hidden");
-    }
-  }
-
-  // ===== API CALLS =====
-  function callApi(method, endpoint) {
-    const token = localStorage.getItem("access_token");
-    fetch(`http://127.0.0.1:5000${endpoint}`, {
-      method,
-      headers: { Authorization: "Bearer " + token }
-    })
-    .then(async r => {
-      document.getElementById("output").innerText =
-        `Status: ${r.status}\n\n${await r.text()}`;
+    // hide all
+    ids.forEach(id => {
+      const btn = document.getElementById(id);
+      btn.classList.add("hidden");
+      btn.style.opacity = "0";
+      btn.style.transform = "translateY(20px)";
     });
+
+    setTimeout(() => {
+      // Books
+      if (roles.includes("read_only")) showButton("btn-view");
+      if (roles.includes("crud_no_delete") || roles.includes("full_crud")) {
+        showButton("btn-view");
+        showButton("btn-add");
+      }
+      if (roles.includes("full_crud")) showButton("btn-delete");
+
+      // Notes
+      if (roles.includes("read_only")) showButton("btn-notes-view");
+      if (roles.includes("crud_no_delete") || roles.includes("full_crud")) {
+        showButton("btn-notes-view");
+        showButton("btn-notes-add");
+      }
+      if (roles.includes("full_crud")) showButton("btn-notes-del");
+    }, 120);
   }
 
-  function callApiJson(method, endpoint, body) {
+  function renderQuickActions(roles) {
+    const canRead  = roles.some(r => ["read_only","crud_no_delete","full_crud"].includes(r));
+    const canWrite = roles.some(r => ["crud_no_delete","full_crud"].includes(r));
+
+    // read actions
+    ["qa-view-books","qa-view-notes"].forEach(id => gateBtn(id, canRead));
+
+    // write actions
+    ["qa-add-book","qa-add-note"].forEach(id => gateBtn(id, canWrite));
+  }
+
+  function gateBtn(id, enabled) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.disabled = !enabled;
+    el.style.opacity = enabled ? "1" : "0.55";
+  }
+
+  function showButton(id) {
+    const btn = document.getElementById(id);
+    btn.classList.remove("hidden");
+    setTimeout(() => {
+      btn.style.transition = "all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)";
+      btn.style.opacity = "1";
+      btn.style.transform = "translateY(0)";
+    }, Math.random() * 200);
+  }
+
+  // ======================
+  // API
+  // ======================
+  async function callApi(method, endpoint) {
     const token = localStorage.getItem("access_token");
-    fetch(`http://127.0.0.1:5000${endpoint}`, {
-      method,
-      headers: {
-        Authorization: "Bearer " + token,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(body)
-    })
-    .then(async r => {
-      document.getElementById("output").innerText =
-        `Status: ${r.status}\n\n${await r.text()}`;
-    });
+    if (!token) return showError(" Please login first (no token).");
+
+    showLoading(` Calling ${method} ${endpoint}...`);
+    try {
+      const res = await fetch(`${API_BASE}${endpoint}`, {
+        method,
+        headers: { Authorization: "Bearer " + token }
+      });
+      const text = await res.text();
+      if (res.ok) showSuccess(` ${method} ${endpoint}\nStatus: ${res.status}\n\n${text}`);
+      else showError(` ${method} ${endpoint}\nStatus: ${res.status}\n\n${text}`);
+    } catch (e) {
+      showError(` Network Error:\n${e.message}\n\nPlease ensure backend server is running.`);
+    }
   }
 
-  // Books
+  async function callApiJson(method, endpoint, body) {
+    const token = localStorage.getItem("access_token");
+    if (!token) return showError(" Please login first (no token).");
+
+    showLoading(` Calling ${method} ${endpoint}...`);
+    try {
+      const res = await fetch(`${API_BASE}${endpoint}`, {
+        method,
+        headers: {
+          Authorization: "Bearer " + token,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(body || {})
+      });
+      const text = await res.text();
+      if (res.ok) showSuccess(` ${method} ${endpoint}\nStatus: ${res.status}\n\n${text}`);
+      else showError(` ${method} ${endpoint}\nStatus: ${res.status}\n\n${text}`);
+    } catch (e) {
+      showError(` Network Error:\n${e.message}\n\nPlease ensure backend server is running.`);
+    }
+  }
+
+  async function updateQuickStats() {
+    const token = localStorage.getItem("access_token");
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_BASE}/stats`, { headers: { Authorization: "Bearer " + token }});
+      if (!res.ok) return;
+      const data = await res.json();
+      const line = `\n\n Stats:\n${JSON.stringify(data, null, 2)}`;
+      document.getElementById("output").innerText += line;
+    } catch {}
+  }
+
+  // ======================
+  // Console Utilities
+  // ======================
+  function clearConsole() {
+    document.getElementById("output").innerText = " Console cleared\n Ready for commands...";
+  }
+
+  async function copyConsole() {
+    const text = document.getElementById("output").innerText;
+    try {
+      await navigator.clipboard.writeText(text);
+      showSuccess(" Console output copied to clipboard");
+    } catch {
+      showError(" Failed to copy to clipboard");
+    }
+  }
+
+  function exportLogs() {
+    const text = document.getElementById("output").innerText;
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `secure-library-logs-${new Date().toISOString().slice(0,19)}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showSuccess(" Logs exported successfully");
+  }
+
+  // Display
+  function showLoading(message) {
+    document.getElementById("output").innerHTML = `<span class="loading"></span> ${message}`;
+    document.getElementById("output").style.color = "#86efac";
+  }
+  function showSuccess(message) {
+    const out = document.getElementById("output");
+    out.innerText = ` ${message}`;
+    out.style.color = "#86efac";
+  }
+  function showError(message) {
+    const out = document.getElementById("output");
+    out.innerText = ` ${message}`;
+    out.style.color = "#fca5a5";
+  }
+
+  function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
+
+  // Management button actions
   document.getElementById("btn-view").onclick = () => callApi("GET", "/books");
-  document.getElementById("btn-add").onclick = () => callApi("POST", "/books");
-  document.getElementById("btn-delete").onclick = () => callApi("DELETE", "/books/1");
+  document.getElementById("btn-add").onclick = () => callApiJson("POST", "/books", { title: "New Book", author: "UI" });
+  document.getElementById("btn-delete").onclick = () => {
+    const id = prompt("Enter book id to delete:");
+    if (!id) return;
+    callApi("DELETE", `/books/${encodeURIComponent(id)}`);
+  };
 
-  // Notes
   document.getElementById("btn-notes-view").onclick = () => callApi("GET", "/notes");
   document.getElementById("btn-notes-add").onclick = () =>
-    callApiJson("POST", "/notes", { title: "Frontend Note", content: "Hello from UI" });
-  document.getElementById("btn-notes-del").onclick = () => callApi("DELETE", "/notes/1");
+    callApiJson("POST", "/notes", { title: "New Secure Note", content: "Created from Secure Library Interface" });
+  document.getElementById("btn-notes-del").onclick = () => {
+    const id = prompt("Enter note id to delete:");
+    if (!id) return;
+    callApi("DELETE", `/notes/${encodeURIComponent(id)}`);
+  };
 
-  parseToken();
+  // Shortcuts
+  document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.key === 'l') { e.preventDefault(); login(); }
+    if (e.ctrlKey && e.key === 'k') { e.preventDefault(); clearConsole(); }
+    if (e.key === 'Escape') { clearConsole(); }
+  });
+
+  // Init
+  document.addEventListener('DOMContentLoaded', async () => {
+    createParticles();
+    setBadge(!!localStorage.getItem("access_token"));
+
+    await handleAuthRedirect();
+
+    // If token already exists, verify session
+    if (localStorage.getItem("access_token")) {
+      setTimeout(callMe, 400);
+    }
+
+    // Token expiry check
+    setInterval(() => {
+      const t = localStorage.getItem("access_token");
+      if (!t) return;
+
+      const expiresAt = Number(localStorage.getItem("token_expires_at") || "0");
+      if (expiresAt && Date.now() > expiresAt) {
+        showError(" Session expired. Please login again.");
+        localStorage.clear();
+        setBadge(false);
+      }
+    }, 30000);
+  });
 </script>
-
 </body>
 </html>
