@@ -1,6 +1,7 @@
 import fs from "fs";
 import xlsx from "xlsx";
 import fetch from "node-fetch";
+import "dotenv/config";
 
 // ========= CONFIG =========
 const KEYCLOAK_BASE = "http://localhost:8081";
