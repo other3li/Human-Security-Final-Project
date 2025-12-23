@@ -1,4 +1,5 @@
 import os
+import uuid
 from functools import wraps
 from datetime import datetime
 
@@ -20,10 +21,15 @@ app = Flask(__name__)
 # ======================
 # CORS (frontend origin)
 # ======================
-# ✅ مهم: اسمح بـ localhost و 127.0.0.1 عشان اختلاف السيرفر اللي بيشغل الفرونت
+# Support both localhost and 127.0.0.1 (common cause of "Failed to fetch")
+FRONTEND_ORIGINS = os.getenv(
+    "FRONTEND_ORIGINS",
+    "http://localhost:5500,http://127.0.0.1:5500"
+).split(",")
+
 CORS(
     app,
-    resources={r"/*": {"origins": ["http://localhost:5500", "http://127.0.0.1:5500"]}},
+    resources={r"/*": {"origins": [o.strip() for o in FRONTEND_ORIGINS if o.strip()]}},
     allow_headers=["Authorization", "Content-Type"],
     methods=["GET", "POST", "DELETE", "OPTIONS"],
 )
@@ -31,8 +37,11 @@ CORS(
 # ======================
 # Keycloak Config
 # ======================
+# If Keycloak older (has /auth), set KEYCLOAK_BASE_URL=http://localhost:8081/auth
 KEYCLOAK_BASE_URL = os.getenv("KEYCLOAK_BASE_URL", "http://localhost:8081").rstrip("/")
 REALM = os.getenv("KEYCLOAK_REALM", "secured-library")
+
+# Token audience: usually "frontend-client". We accept multiple for flexibility.
 AUDIENCE = os.getenv("KEYCLOAK_AUDIENCE", "frontend-client")
 
 OIDC_CONFIG_URL = f"{KEYCLOAK_BASE_URL}/realms/{REALM}/.well-known/openid-configuration"
@@ -41,70 +50,105 @@ _oidc = None
 _jwks_client = None
 
 # ======================
-# DB Config
+# DB Config (Postgres)
 # ======================
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
-    DATABASE_URL = "sqlite:///secure_library.db"
+    raise RuntimeError(
+        "DATABASE_URL is missing. Example:\n"
+        "DATABASE_URL=postgresql://postgres:postgres123@localhost:5432/secured_library"
+    )
 
-connect_args = {}
-if DATABASE_URL.startswith("sqlite"):
-    connect_args = {"check_same_thread": False}
-
-engine = create_engine(DATABASE_URL, pool_pre_ping=True, connect_args=connect_args)
-DIALECT = engine.dialect.name  # 'postgresql' or 'sqlite' ...
+engine = create_engine(DATABASE_URL, pool_pre_ping=True, future=True)
 
 
 def init_database():
-    """Create tables if they don't exist (handles PostgreSQL vs SQLite)"""
+    """
+    Creates tables if they don't exist (idempotent).
+    NOTE: This does NOT DROP data. For a full reset run library.sql manually.
+    """
     try:
         with engine.begin() as conn:
-            if DIALECT == "postgresql":
-                conn.execute(text("""
-                    CREATE TABLE IF NOT EXISTS books (
-                        id SERIAL PRIMARY KEY,
-                        title VARCHAR(255) NOT NULL,
-                        author VARCHAR(255) NOT NULL,
-                        available BOOLEAN DEFAULT TRUE,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    )
-                """))
+            # 1) Users (synced from Keycloak / upserted on login)
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS app_users (
+                  keycloak_id UUID PRIMARY KEY,
+                  username     VARCHAR(150) NOT NULL UNIQUE,
+                  email        VARCHAR(255) UNIQUE,
+                  first_name   VARCHAR(150),
+                  last_name    VARCHAR(150),
+                  roles        TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
+                  enabled      BOOLEAN NOT NULL DEFAULT TRUE,
+                  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                  updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                )
+            """))
 
-                conn.execute(text("""
-                    CREATE TABLE IF NOT EXISTS notes (
-                        id SERIAL PRIMARY KEY,
-                        user_id VARCHAR(255) NOT NULL,
-                        username VARCHAR(255) NOT NULL,
-                        title VARCHAR(255) NOT NULL,
-                        content TEXT,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    )
-                """))
-            else:
-                conn.execute(text("""
-                    CREATE TABLE IF NOT EXISTS books (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        title VARCHAR(255) NOT NULL,
-                        author VARCHAR(255) NOT NULL,
-                        available BOOLEAN DEFAULT 1,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    )
-                """))
+            # 2) Books
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS books (
+                  id          BIGSERIAL PRIMARY KEY,
+                  title       VARCHAR(255) NOT NULL,
+                  author      VARCHAR(255) NOT NULL,
+                  available   BOOLEAN NOT NULL DEFAULT TRUE,
+                  created_by  UUID NULL REFERENCES app_users(keycloak_id) ON DELETE SET NULL,
+                  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                  updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                )
+            """))
 
-                conn.execute(text("""
-                    CREATE TABLE IF NOT EXISTS notes (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        user_id VARCHAR(255) NOT NULL,
-                        username VARCHAR(255) NOT NULL,
-                        title VARCHAR(255) NOT NULL,
-                        content TEXT,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    )
-                """))
+            # 3) Notes
+            conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS notes (
+                  id         BIGSERIAL PRIMARY KEY,
+                  user_id    UUID NOT NULL REFERENCES app_users(keycloak_id) ON DELETE CASCADE,
+                  username   VARCHAR(150) NOT NULL,
+                  title      VARCHAR(255) NOT NULL,
+                  content    TEXT,
+                  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                )
+            """))
 
-            # seed books if empty
-            result = conn.execute(text("SELECT COUNT(*) FROM books"))
-            if (result.scalar() or 0) == 0:
+            # Indexes
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_notes_user_created ON notes(user_id, created_at DESC)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS idx_books_created_at ON books(created_at DESC)"))
+
+            # updated_at triggers
+            conn.execute(text("""
+                CREATE OR REPLACE FUNCTION set_updated_at()
+                RETURNS TRIGGER AS $$
+                BEGIN
+                  NEW.updated_at = NOW();
+                  RETURN NEW;
+                END;
+                $$ LANGUAGE plpgsql;
+            """))
+
+            conn.execute(text("DROP TRIGGER IF EXISTS trg_app_users_updated_at ON app_users"))
+            conn.execute(text("""
+                CREATE TRIGGER trg_app_users_updated_at
+                BEFORE UPDATE ON app_users
+                FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+            """))
+
+            conn.execute(text("DROP TRIGGER IF EXISTS trg_books_updated_at ON books"))
+            conn.execute(text("""
+                CREATE TRIGGER trg_books_updated_at
+                BEFORE UPDATE ON books
+                FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+            """))
+
+            conn.execute(text("DROP TRIGGER IF EXISTS trg_notes_updated_at ON notes"))
+            conn.execute(text("""
+                CREATE TRIGGER trg_notes_updated_at
+                BEFORE UPDATE ON notes
+                FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+            """))
+
+            # Seed books if empty
+            count = conn.execute(text("SELECT COUNT(*) FROM books")).scalar() or 0
+            if count == 0:
                 conn.execute(text("""
                     INSERT INTO books (title, author) VALUES
                     ('Human Security Principles', 'Dr. Alex Johnson'),
@@ -113,9 +157,10 @@ def init_database():
                     ('Secure Software Development', 'Emily Davis')
                 """))
 
-        print(f"Database initialized (dialect={DIALECT})")
+        print("Database schema ensured (Postgres).")
     except Exception as e:
         print(f"Database init failed: {e}")
+        raise
 
 
 init_database()
@@ -130,16 +175,55 @@ def get_oidc():
         r.raise_for_status()
         _oidc = r.json()
         _jwks_client = PyJWKClient(_oidc["jwks_uri"])
-        print(f"Connected to Keycloak: {_oidc.get('issuer')}")
+        print(f"Connected to Keycloak issuer: {_oidc.get('issuer')}")
     return _oidc, _jwks_client
 
 
-def extract_roles(payload: dict) -> set:
+def extract_roles(payload: dict) -> list:
     roles = set(payload.get("realm_access", {}).get("roles", []))
     ra = payload.get("resource_access", {})
     for _, data in ra.items():
         roles.update(data.get("roles", []))
-    return roles
+    return sorted(list(roles))
+
+
+def upsert_user_in_db(user: dict):
+    """
+    Sync user info into app_users (so notes/books can FK to it).
+    """
+    try:
+        # Keycloak "sub" is UUID string. Validate/cast.
+        kc_id = str(uuid.UUID(user["user_id"]))
+        roles = user.get("roles", [])
+
+        with engine.begin() as conn:
+            conn.execute(
+                text("""
+                    INSERT INTO app_users (keycloak_id, username, email, first_name, last_name, roles, enabled)
+                    VALUES (CAST(:kid AS uuid), :username, :email, :first_name, :last_name, :roles, :enabled)
+                    ON CONFLICT (keycloak_id) DO UPDATE SET
+                      username   = EXCLUDED.username,
+                      email      = EXCLUDED.email,
+                      first_name = EXCLUDED.first_name,
+                      last_name  = EXCLUDED.last_name,
+                      roles      = EXCLUDED.roles,
+                      enabled    = EXCLUDED.enabled,
+                      updated_at = NOW()
+                """),
+                {
+                    "kid": kc_id,
+                    "username": user.get("username"),
+                    "email": user.get("email"),
+                    "first_name": user.get("first_name"),
+                    "last_name": user.get("last_name"),
+                    "roles": roles,
+                    "enabled": True,
+                },
+            )
+    except Exception:
+        # Don't block auth if DB sync fails; log and continue.
+        import traceback
+        traceback.print_exc()
 
 
 def require_roles(required=None):
@@ -169,14 +253,20 @@ def require_roles(required=None):
 
                 user_roles = extract_roles(payload)
 
-                if required and not (user_roles & required):
+                if required and not (set(user_roles) & required):
                     return jsonify(error="Forbidden (insufficient role)"), 403
 
                 request.user = {
                     "username": payload.get("preferred_username", "unknown"),
-                    "roles": sorted(list(user_roles)),
+                    "roles": user_roles,
                     "user_id": payload.get("sub", ""),
+                    "email": payload.get("email"),
+                    "first_name": payload.get("given_name") or payload.get("name"),
+                    "last_name": payload.get("family_name"),
                 }
+
+                # Keep app_users table in sync
+                upsert_user_in_db(request.user)
 
             except jwt.ExpiredSignatureError:
                 return jsonify(error="Token expired"), 401
@@ -207,21 +297,49 @@ def me():
 @app.get("/health")
 def health_check():
     keycloak_status = "connected" if _oidc else "disconnected"
+    db_status = "connected"
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+    except Exception as e:
+        db_status = f"disconnected ({e})"
+
     return jsonify({
         "status": "healthy",
         "timestamp": datetime.now().isoformat(),
-        "database": "connected" if engine else "disconnected",
+        "database": db_status,
         "keycloak": keycloak_status,
-        "dialect": DIALECT,
+        "frontend_origins": FRONTEND_ORIGINS,
         "endpoints": {
             "public": "/public",
             "user_info": "/me",
             "health": "/health",
             "books": ["GET /books", "POST /books", "DELETE /books/:id"],
             "notes": ["GET /notes", "POST /notes", "DELETE /notes/:id"],
-            "stats": "GET /stats"
+            "stats": "GET /stats",
+            "users": "GET /users (admin)"
         }
     }), 200
+
+
+# ======================
+# USERS (Admin helper)
+# ======================
+@app.get("/users")
+@require_roles(["full_crud"])
+def list_users():
+    try:
+        with engine.connect() as conn:
+            res = conn.execute(text("""
+                SELECT keycloak_id, username, email, first_name, last_name, roles, enabled, created_at, updated_at
+                FROM app_users
+                ORDER BY created_at DESC
+                LIMIT 500
+            """))
+            users = [dict(r) for r in res.mappings().all()]
+        return jsonify(users=users), 200
+    except SQLAlchemyError as e:
+        return jsonify(error="Database error", details=str(e)), 500
 
 
 # ======================
@@ -232,11 +350,12 @@ def health_check():
 def list_books():
     try:
         with engine.connect() as conn:
-            result = conn.execute(text("""
-                SELECT id, title, author, available, created_at
-                FROM books ORDER BY id
+            res = conn.execute(text("""
+                SELECT id, title, author, available, created_by, created_at, updated_at
+                FROM books
+                ORDER BY id
             """))
-            books = [dict(row) for row in result.mappings().all()]
+            books = [dict(row) for row in res.mappings().all()]
         return jsonify(books=books), 200
     except SQLAlchemyError as e:
         return jsonify(error="Database error", details=str(e)), 500
@@ -254,31 +373,20 @@ def create_book():
 
     try:
         with engine.begin() as conn:
-            if DIALECT == "postgresql":
-                book = conn.execute(text("""
-                    INSERT INTO books (title, author)
-                    VALUES (:t, :a)
-                    RETURNING id, title, author, available, created_at
-                """), {"t": title, "a": author}).mappings().first()
-            else:
-                res = conn.execute(text("""
-                    INSERT INTO books (title, author)
-                    VALUES (:t, :a)
-                """), {"t": title, "a": author})
+            row = conn.execute(
+                text("""
+                    INSERT INTO books (title, author, created_by)
+                    VALUES (:t, :a, CAST(:uid AS uuid))
+                    RETURNING id, title, author, available, created_by, created_at, updated_at
+                """),
+                {"t": title, "a": author, "uid": request.user["user_id"]},
+            ).mappings().first()
 
-                book_id = res.lastrowid if hasattr(res, "lastrowid") else None
-                if book_id is None:
-                    row = conn.execute(text("SELECT id FROM books ORDER BY id DESC LIMIT 1")).mappings().first()
-                    book_id = row["id"]
-
-                book = conn.execute(text("""
-                    SELECT id, title, author, available, created_at
-                    FROM books WHERE id = :id
-                """), {"id": book_id}).mappings().first()
-
-        return jsonify(book=dict(book)), 201
+        return jsonify(book=dict(row)), 201
     except SQLAlchemyError as e:
         return jsonify(error="Database error", details=str(e)), 500
+    except Exception as e:
+        return jsonify(error="Unexpected error", details=str(e)), 500
 
 
 @app.delete("/books/<int:book_id>")
@@ -304,13 +412,13 @@ def delete_book(book_id):
 def list_notes():
     try:
         with engine.connect() as conn:
-            result = conn.execute(text("""
-                SELECT id, title, content, created_at
+            res = conn.execute(text("""
+                SELECT id, title, content, created_at, updated_at
                 FROM notes
-                WHERE user_id = :user_id
+                WHERE user_id = CAST(:user_id AS uuid)
                 ORDER BY created_at DESC
             """), {"user_id": request.user["user_id"]})
-            notes = [dict(row) for row in result.mappings().all()]
+            notes = [dict(row) for row in res.mappings().all()]
         return jsonify(notes=notes), 200
     except SQLAlchemyError as e:
         return jsonify(error="Database error", details=str(e)), 500
@@ -328,39 +436,18 @@ def create_note():
 
     try:
         with engine.begin() as conn:
-            if DIALECT == "postgresql":
-                note = conn.execute(text("""
-                    INSERT INTO notes (user_id, username, title, content)
-                    VALUES (:user_id, :username, :title, :content)
-                    RETURNING id, title, content, created_at
-                """), {
-                    "user_id": request.user["user_id"],
-                    "username": request.user["username"],
-                    "title": title,
-                    "content": content
-                }).mappings().first()
-            else:
-                res = conn.execute(text("""
-                    INSERT INTO notes (user_id, username, title, content)
-                    VALUES (:user_id, :username, :title, :content)
-                """), {
-                    "user_id": request.user["user_id"],
-                    "username": request.user["username"],
-                    "title": title,
-                    "content": content
-                })
+            row = conn.execute(text("""
+                INSERT INTO notes (user_id, username, title, content)
+                VALUES (CAST(:uid AS uuid), :username, :title, :content)
+                RETURNING id, title, content, created_at, updated_at
+            """), {
+                "uid": request.user["user_id"],
+                "username": request.user["username"],
+                "title": title,
+                "content": content
+            }).mappings().first()
 
-                note_id = res.lastrowid if hasattr(res, "lastrowid") else None
-                if note_id is None:
-                    row = conn.execute(text("SELECT id FROM notes ORDER BY id DESC LIMIT 1")).mappings().first()
-                    note_id = row["id"]
-
-                note = conn.execute(text("""
-                    SELECT id, title, content, created_at
-                    FROM notes WHERE id = :id
-                """), {"id": note_id}).mappings().first()
-
-        return jsonify(note=dict(note)), 201
+        return jsonify(note=dict(row)), 201
     except SQLAlchemyError as e:
         return jsonify(error="Database error", details=str(e)), 500
 
@@ -372,7 +459,7 @@ def delete_note(note_id):
         with engine.begin() as conn:
             res = conn.execute(text("""
                 DELETE FROM notes
-                WHERE id = :id AND user_id = :user_id
+                WHERE id = :id AND user_id = CAST(:user_id AS uuid)
             """), {"id": note_id, "user_id": request.user["user_id"]})
 
         if res.rowcount == 0:
@@ -392,13 +479,9 @@ def get_stats():
     try:
         with engine.connect() as conn:
             total_books = conn.execute(text("SELECT COUNT(*) FROM books")).scalar() or 0
-            if DIALECT == "postgresql":
-                available_books = conn.execute(text("SELECT COUNT(*) FROM books WHERE available = TRUE")).scalar() or 0
-            else:
-                available_books = conn.execute(text("SELECT COUNT(*) FROM books WHERE available = 1")).scalar() or 0
-
+            available_books = conn.execute(text("SELECT COUNT(*) FROM books WHERE available = TRUE")).scalar() or 0
             user_notes = conn.execute(
-                text("SELECT COUNT(*) FROM notes WHERE user_id = :user_id"),
+                text("SELECT COUNT(*) FROM notes WHERE user_id = CAST(:user_id AS uuid)"),
                 {"user_id": request.user["user_id"]}
             ).scalar() or 0
 
@@ -430,10 +513,9 @@ if __name__ == "__main__":
     print("SECURE LIBRARY BACKEND - HUMAN SECURITY SYSTEM")
     print("=" * 60)
     print("Server URL: http://127.0.0.1:5000")
-    print("CORS Origins: http://localhost:5500 , http://127.0.0.1:5500")
+    print("Frontend Origins:", FRONTEND_ORIGINS)
     print(f"Keycloak URL: {KEYCLOAK_BASE_URL}")
     print(f"Realm: {REALM}")
     print(f"DB: {DATABASE_URL}")
-    print(f"Dialect: {DIALECT}")
     print("=" * 60)
     app.run(host="127.0.0.1", port=5000, debug=True)
